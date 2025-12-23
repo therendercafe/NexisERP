@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   BrainCircuit, 
@@ -44,7 +44,6 @@ function TypewriterText({ text, speed = 1 }: { text: string; speed?: number }) {
 
   useEffect(() => {
     let index = 0;
-    // For 3x faster, we increment by more characters per tick if 1ms is still too slow
     const charsPerTick = 3; 
     
     const interval = setInterval(() => {
@@ -74,7 +73,7 @@ function TypewriterText({ text, speed = 1 }: { text: string; speed?: number }) {
   );
 }
 
-export default function AIAuditorPage() {
+function AIAuditorContent() {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -100,7 +99,7 @@ export default function AIAuditorPage() {
       hasInitialized.current = true;
       runAuditSequence(initialQuery);
     }
-  }, [searchParams]); // Added searchParams to deps for safety, but ref guards it
+  }, [searchParams]);
 
   const handleExportPDF = async () => {
     setIsExporting(true);
@@ -108,7 +107,6 @@ export default function AIAuditorPage() {
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
       
-      // Header
       doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, pageWidth, 40, 'F');
       doc.setTextColor(255, 255, 255);
@@ -124,22 +122,18 @@ export default function AIAuditorPage() {
 
       messages.forEach((msg, idx) => {
         const isUser = msg.role === "user";
-        
-        // Message Header
         doc.setTextColor(100, 116, 139);
         doc.setFontSize(8);
         doc.setFont("helvetica", "bold");
         doc.text(isUser ? "USER QUERY" : "ORACLE RESPONSE", 14, currentY);
         currentY += 5;
 
-        // Message Content
         doc.setTextColor(15, 23, 42);
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         
         const splitText = doc.splitTextToSize(msg.content, pageWidth - 28);
         
-        // Check if we need a new page
         if (currentY + (splitText.length * 5) > 280) {
           doc.addPage();
           currentY = 20;
@@ -173,7 +167,6 @@ export default function AIAuditorPage() {
       <main className="flex-1 ml-64 p-8 relative overflow-hidden flex flex-col">
         <OracleGrid />
         
-        {/* Page Header */}
         <div className="relative z-10 mb-12 flex justify-between items-start">
           <div>
             <div className="flex items-center gap-3 mb-4">
@@ -215,10 +208,7 @@ export default function AIAuditorPage() {
           </div>
         </div>
 
-        {/* Main Interface Grid */}
         <div className="relative z-10 flex-1 grid grid-cols-12 gap-8 min-h-0">
-          
-          {/* Chat / Audit Terminal */}
           <div className="col-span-12 lg:col-span-8 flex flex-col bg-card border border-border rounded-[2rem] overflow-hidden shadow-2xl">
             <div className="p-4 border-b border-border bg-secondary/30 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -307,7 +297,6 @@ export default function AIAuditorPage() {
             </form>
           </div>
 
-          {/* Categories / Vectors */}
           <div className="col-span-12 lg:col-span-4 space-y-6">
             <div className="p-6 bg-card border border-border rounded-[2rem] shadow-xl">
               <h3 className="text-[11px] font-black uppercase tracking-[0.2em] mb-6 flex items-center gap-2 text-foreground">
@@ -362,6 +351,18 @@ export default function AIAuditorPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function AIAuditorPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen bg-background items-center justify-center">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+      </div>
+    }>
+      <AIAuditorContent />
+    </Suspense>
   );
 }
 
